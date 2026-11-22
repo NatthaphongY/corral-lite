@@ -1,0 +1,34 @@
+name: "💡 Feature Request"
+description: Suggest an idea or new verification rule for Corral-Lite
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement to Corral-Lite!
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Motivation
+      description: Is your feature request related to a specific problem or anti-pattern you want to detect?
+      placeholder: "A clear and concise description of the motivation..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution / Rule
+      description: Describe the solution or new rule logic you'd like to see implemented.
+      placeholder: |
+        Rule ID / Title:
+        Language: Python / Rust
+        Severity: Blocking / Advisory
+        Behavior: ...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or workarounds you've evaluated.

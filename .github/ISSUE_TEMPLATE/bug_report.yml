@@ -1,0 +1,49 @@
+name: "🐛 Bug Report"
+description: File a bug report to help improve Corral-Lite
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue! Please search existing issues first before submitting.
+  - type: input
+    id: version
+    attributes:
+      label: Corral-Lite Version
+      description: What version of corral-lite are you using? (e.g., v0.1.0 or git commit SHA)
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS & Python Version
+      description: What operating system and Python version are you running?
+      placeholder: "Ubuntu 24.04 LTS, Python 3.12.3 / Windows 11, Python 3.13"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the unexpected behavior is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Code / Steps
+      description: Minimal code sample or CLI command to reproduce the issue.
+      placeholder: |
+        1. Run `corral-lite check sample.py`
+        2. Expected output: ...
+        3. Actual output: ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: Please copy and paste any relevant terminal output or traceback.
+      render: shell

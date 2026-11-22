@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "corral-lite"
+version = "0.3.0"
+description = "Deterministic AST and pattern static verification engine for Python, Rust, Go, TypeScript, and AI agent configs"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Corral Contributors" }
+]
+keywords = ["ast", "static-analysis", "code-quality", "security", "linter", "sarif"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[project.scripts]
+corral-lite = "corral_lite.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/NatthaphongY/corral-lite"
+Repository = "https://github.com/NatthaphongY/corral-lite"
+Issues = "https://github.com/NatthaphongY/corral-lite/issues"
+Changelog = "https://github.com/NatthaphongY/corral-lite/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+corral_lite = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+pythonpath = ["src"]

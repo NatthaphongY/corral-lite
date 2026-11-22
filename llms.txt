@@ -1,0 +1,54 @@
+# corral-lite
+
+> Fast, deterministic AST and pattern static verification engine for Python and Rust with zero external dependencies.
+
+Corral-Lite provides static gatekeeper checks that detect code smells, unsafe dynamic code execution, and mutable default arguments. It returns deterministic exit codes (0 for clean/advisory, 1 for blocking violations) and generates text, structured JSON, or SARIF v2.1.0 reports.
+
+## Core Entrypoints
+
+- CLI Module: `corral_lite.cli`
+- Python Package: `corral_lite`
+- Repository Layout: `src/corral_lite/` (implementation), `tests/` (test suite)
+
+## CLI & Exit Codes
+
+```bash
+# Basic check
+corral-lite check <path>...
+python -m corral_lite.cli check <path>...
+
+# Output formats: text (default), json, sarif
+python -m corral_lite.cli check --format json src/
+python -m corral_lite.cli check --format sarif src/ > results.sarif
+```
+
+- `0`: Scan passed with 0 blocking findings (advisory findings may be present).
+- `1`: Blocking findings detected, or runtime CLI argument error.
+
+## Rules (10)
+
+- `PY001` (Blocking): Bare or broad except pass (`except:` or `except Exception: pass`).
+- `PY002` (Blocking): Mutable default argument (`[]`, `{}`, `set()`).
+- `PY003` (Blocking): Direct dynamic execution (`eval()`, `exec()`).
+- `PY004` (Advisory): Wildcard imports (`from module import *`).
+- `PY005` (Advisory): Unguarded `json.loads` outside try-except.
+- `PY006` (Blocking): Subprocess execution with `shell=True`.
+- `PY007` (Blocking): `assert` statement in non-test production code.
+- `PY008` (Blocking): Hardcoded secret credentials assigned to variables.
+- `RS001` (Blocking): Rust unguarded `.unwrap()`, `.expect()`, or `panic!()`.
+- `RS002` (Blocking): Rust identical conditional branches (`if`/`else`).
+
+## Python API
+
+```python
+from pathlib import Path
+from corral_lite import verify_file, verify_path, Severity
+
+# Scan a single file or directory
+findings = verify_path(Path("src/corral_lite"))
+blocking = [f for f in findings if f.severity == Severity.BLOCKING]
+```
+
+## Normative Spec
+
+- Specification: [docs/spec/CORRAL_VERIFICATION_SPECIFICATION_v1.md](docs/spec/CORRAL_VERIFICATION_SPECIFICATION_v1.md)
