@@ -14,8 +14,9 @@ Instructions and repository contract for autonomous coding agents (Claude Code, 
 
 1. **Zero External Runtime Dependencies**: Standard library only (`ast`, `re`, `json`, `argparse`, `dataclasses`, `enum`, `pathlib`, `typing`, `sys`). Never add 3rd-party dependencies to `dependencies` in `pyproject.toml`.
 2. **Deterministic Exit Codes**:
-   - Exit code `0`: Zero blocking findings.
-   - Exit code `1`: One or more blocking findings or invalid CLI arguments.
+   - Exit code `0`: Zero blocking findings (advisory findings may be present).
+   - Exit code `1`: One or more blocking findings.
+   - Exit code `2`: Invalid CLI arguments or runtime verification error.
 3. **No Bare/Broad Except Pass**: Never catch errors with a bare `except:` or `except Exception:` followed solely by `pass`.
 4. **No Unguarded `json.loads`**: Always wrap JSON parsing in a `try...except json.JSONDecodeError` block.
 5. **Fail-Closed Verification**: All PRs and modifications must pass pytest 100% and report 0 findings during static verification.

@@ -26,7 +26,8 @@ python -m corral_lite.cli check --format sarif src/ > results.sarif
 ```
 
 - `0`: Scan passed with 0 blocking findings (advisory findings may be present).
-- `1`: Blocking findings detected, or runtime CLI argument error.
+- `1`: Blocking findings detected.
+- `2`: Invalid CLI arguments or runtime verification error.
 
 ## Rules (19)
 

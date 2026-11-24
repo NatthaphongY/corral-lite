@@ -64,7 +64,7 @@ python -m corral_lite.cli check src/corral_lite
 
 Expected output:
 ```
-All static verification checks passed (0 findings).
+PASS: 0 findings detected across scanned targets.
 ```
 
 ---

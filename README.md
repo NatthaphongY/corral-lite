@@ -68,7 +68,7 @@ corral-lite check src/
 python -m corral_lite.cli check src/
 ```
 
-If any **blocking** finding is detected, `corral-lite` exits with code `1`. If only advisory findings or zero findings are detected, it exits with code `0`.
+If any **blocking** finding is detected, `corral-lite` exits with code `1`. If only advisory findings or zero findings are detected, it exits with code `0` (and code `2` on invalid arguments or scan errors).
 
 ---
 
@@ -105,16 +105,9 @@ Corral-Lite inspects codebases against 19 deterministic static verification rule
 ### 1. Human-Readable Terminal (Default)
 
 ```text
-======================================================================
-CORRAL-LITE VERIFICATION REPORT
-======================================================================
-Verdict: FAILED
-Total Findings: 1 (Blocking: 1, Advisory: 0)
-
-[BLOCKING] PY001: src/worker.py:42:4
-  Message: Broad or bare except block silenced with pass statement.
-  Fix Hint: Handle the exception, log with diagnostic context, or propagate upward.
-======================================================================
+Scanned targets reported 1 finding(s):
+[ERROR] PY001 at src/worker.py:42:4 - Broad or bare except block silenced with pass statement.
+  Fix hint: Handle the exception, log with diagnostic context, or propagate upward.
 ```
 
 ### 2. Machine-Readable JSON

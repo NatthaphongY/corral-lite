@@ -24,7 +24,8 @@ Corral-Lite inspects files via abstract syntax tree (AST) traversal and determin
 
 #### Deterministic Exit Codes
 - **`0` (PASS)**: Zero blocking findings detected. Advisory findings may be present.
-- **`1` (FAIL)**: One or more blocking findings detected, invalid CLI arguments, or file read error.
+- **`1` (FAIL)**: One or more blocking findings detected.
+- **`2` (ERROR)**: Invalid CLI arguments or file/verification error.
 
 #### Supported File Discovery
 Recursive repository discovery inspects files matching registered suffixes and basenames:

@@ -26,7 +26,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install Corral-Lite
-        run: pip install corral-lite
+        run: pip install git+https://github.com/NatthaphongY/corral-lite.git@v0.4.0
 
       - name: Run Corral-Lite Gate & Export SARIF
         run: corral-lite check . --format sarif > results.sarif
