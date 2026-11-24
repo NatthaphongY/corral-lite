@@ -14,19 +14,21 @@ from corral_lite.ast_rules import (
     RULES,
     Severity,
     verify_config_source,
+    verify_dockerfile,
     verify_file,
     verify_go_source,
     verify_package_json,
     verify_path,
     verify_python_source,
     verify_rust_source,
+    verify_shell_source,
     verify_ts_source,
 )
 from corral_lite.cli import main
 
 
 def test_rules_catalogue_definition():
-    """Verify that all 16 expected rules are registered with proper metadata."""
+    """Verify that all 19 expected rules are registered with proper metadata."""
     expected_rule_ids = {
         "PY001",
         "PY002",
@@ -45,6 +47,8 @@ def test_rules_catalogue_definition():
         "TS001",
         "AGT001",
         "DEPS001",
+        "DK001",
+        "SH001",
     }
     assert set(RULES.keys()) == expected_rule_ids
     for rule_id in expected_rule_ids:
@@ -414,6 +418,105 @@ def test_deps001_lifecycle_scripts(tmp_path):
     assert any(f.rule_id == "DEPS001" for f in path_findings)
 
 
+def test_dk001_dockerfile_pipe_to_shell(tmp_path):
+    docker_curl_pipe = (
+        "FROM ubuntu:24.04\n"
+        "RUN apt-get update && apt-get install -y curl\n"
+        "RUN curl -fsSL https://example.com/install.sh | bash\n"
+    )
+    findings = verify_dockerfile(docker_curl_pipe, "Dockerfile")
+    assert any(f.rule_id == "DK001" and f.severity == Severity.ADVISORY for f in findings)
+
+    docker_wget_pipe = (
+        "FROM alpine:3.20\n"
+        "RUN wget -qO- https://example.com/setup.sh | sh\n"
+    )
+    findings_wget = verify_dockerfile(docker_wget_pipe, "Dockerfile")
+    assert any(f.rule_id == "DK001" for f in findings_wget)
+
+    docker_multiline = (
+        "FROM debian:bookworm\n"
+        "RUN curl -fsSL https://example.com/install.sh \\\n"
+        "    | bash\n"
+    )
+    findings_multi = verify_dockerfile(docker_multiline, "app.dockerfile")
+    assert any(f.rule_id == "DK001" for f in findings_multi)
+
+    docker_safe = (
+        "FROM ubuntu:24.04\n"
+        "# RUN curl -fsSL https://example.com/install.sh | bash\n"
+        "COPY script.sh /tmp/script.sh\n"
+        "RUN chmod +x /tmp/script.sh && /tmp/script.sh\n"
+    )
+    findings_safe = verify_dockerfile(docker_safe, "Dockerfile")
+    assert not any(f.rule_id == "DK001" for f in findings_safe)
+
+    # Discovery tests
+    df_file = tmp_path / "Dockerfile"
+    df_file.write_text(docker_curl_pipe, encoding="utf-8")
+    assert any(f.rule_id == "DK001" for f in verify_file(df_file))
+
+    df_custom = tmp_path / "custom.dockerfile"
+    df_custom.write_text(docker_wget_pipe, encoding="utf-8")
+    assert any(f.rule_id == "DK001" for f in verify_file(df_custom))
+
+    assert any(f.rule_id == "DK001" for f in verify_path(tmp_path))
+
+
+def test_sh001_shell_missing_set_e(tmp_path):
+    sh_bad = (
+        "#!/usr/bin/env bash\n"
+        "echo 'Running deployment...'\n"
+        "rm -rf /tmp/build\n"
+    )
+    findings = verify_shell_source(sh_bad, "deploy.sh")
+    assert any(f.rule_id == "SH001" and f.severity == Severity.ADVISORY for f in findings)
+
+    sh_good_e = (
+        "#!/bin/bash\n"
+        "set -e\n"
+        "echo 'Running deployment...'\n"
+    )
+    findings_good_e = verify_shell_source(sh_good_e, "deploy.sh")
+    assert not any(f.rule_id == "SH001" for f in findings_good_e)
+
+    sh_good_euo = (
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "echo 'Running build...'\n"
+    )
+    findings_good_euo = verify_shell_source(sh_good_euo, "build.bash")
+    assert not any(f.rule_id == "SH001" for f in findings_good_euo)
+
+    sh_good_errexit = (
+        "#!/bin/sh\n"
+        "set -o errexit\n"
+        "echo 'Strict mode'\n"
+    )
+    findings_good_errexit = verify_shell_source(sh_good_errexit, "run.sh")
+    assert not any(f.rule_id == "SH001" for f in findings_good_errexit)
+
+    # Comment only should still be flagged
+    sh_commented = (
+        "#!/bin/bash\n"
+        "# set -e\n"
+        "echo 'Unprotected script'\n"
+    )
+    findings_commented = verify_shell_source(sh_commented, "test.sh")
+    assert any(f.rule_id == "SH001" for f in findings_commented)
+
+    # Discovery tests
+    sh_file = tmp_path / "script.sh"
+    sh_file.write_text(sh_bad, encoding="utf-8")
+    assert any(f.rule_id == "SH001" for f in verify_file(sh_file))
+
+    bash_file = tmp_path / "script.bash"
+    bash_file.write_text(sh_bad, encoding="utf-8")
+    assert any(f.rule_id == "SH001" for f in verify_file(bash_file))
+
+    assert any(f.rule_id == "SH001" for f in verify_path(tmp_path))
+
+
 def test_cli_formats_and_exit_codes(capsys):
     repo_root = Path(__file__).resolve().parent.parent
     bad_py_path = repo_root / "examples" / "bad_sample.py"
@@ -461,3 +564,13 @@ def test_self_check():
     repo_src = Path(__file__).resolve().parent.parent / "src" / "corral_lite"
     findings = verify_path(repo_src)
     assert len(findings) == 0, f"Self-check findings: {findings}"
+
+
+def test_cli_version(capsys):
+    """Verify that corral-lite reports version 0.4.0."""
+    with pytest.raises(SystemExit) as exc_info:
+        main(["--version"])
+    assert exc_info.value.code == 0
+    out = capsys.readouterr().out
+    assert "0.4.0" in out
+

@@ -203,6 +203,22 @@ RULES: dict[str, Rule] = {
         description="Execution of arbitrary lifecycle hooks during package installation introduces supply-chain lifecycle risks.",
         fix_hint="Avoid preinstall/postinstall lifecycle scripts or execute setup commands explicitly via auditable build scripts.",
     ),
+    "DK001": Rule(
+        id="DK001",
+        title="Dockerfile pipes remote script directly to shell",
+        language="dockerfile",
+        severity=Severity.ADVISORY,
+        description="Dockerfile executes remote script piped directly to shell (e.g. curl ... | bash or wget ... | sh).",
+        fix_hint="Download script, verify integrity hash, and execute locally or use multi-stage build.",
+    ),
+    "SH001": Rule(
+        id="SH001",
+        title="Shell script lacking set -e or set -euo pipefail",
+        language="shell",
+        severity=Severity.ADVISORY,
+        description="Shell script lacks 'set -e' or 'set -euo pipefail' for robust error handling.",
+        fix_hint="Add 'set -e' or 'set -euo pipefail' near the beginning of the script to prevent silent errors.",
+    ),
 }
 
 # Dynamically construct sensitive pattern tokens to avoid triggering self-inspections
@@ -803,6 +819,122 @@ def verify_package_json(source: str, file_path: str) -> list[Finding]:
     return findings
 
 
+def verify_dockerfile(source: str, file_path: str) -> list[Finding]:
+    """Verify Dockerfile for piping remote scripts to shell (DK001)."""
+    findings: list[Finding] = []
+    lines = source.splitlines()
+    pipe_pattern = re.compile(
+        r"\b(?:curl|wget)\b[^|\n\r]*\|\s*(?:sudo\s+)?(?:env\s+)?(?:/(?:usr/)?bin/)?(?:bash|sh|zsh|dash)\b",
+        re.IGNORECASE,
+    )
+
+    buffer = ""
+    buffer_start_line = 1
+    buffer_start_col = 0
+
+    for idx, raw_line in enumerate(lines, start=1):
+        line = raw_line.strip()
+        if line.startswith("#"):
+            continue
+
+        m = pipe_pattern.search(raw_line)
+        if m:
+            rule = RULES["DK001"]
+            findings.append(
+                Finding(
+                    rule_id=rule.id,
+                    severity=rule.severity,
+                    file_path=file_path,
+                    line=idx,
+                    column=m.start(),
+                    message="Dockerfile pipes remote script directly to shell.",
+                    fix_hint=rule.fix_hint,
+                )
+            )
+            buffer = ""
+            continue
+
+        if line.endswith("\\"):
+            chunk = line[:-1].strip()
+            if not buffer:
+                buffer = chunk
+                buffer_start_line = idx
+                buffer_start_col = raw_line.find(chunk)
+            else:
+                buffer += " " + chunk
+        else:
+            if buffer:
+                buffer += " " + line
+                m_buf = pipe_pattern.search(buffer)
+                if m_buf:
+                    rule = RULES["DK001"]
+                    findings.append(
+                        Finding(
+                            rule_id=rule.id,
+                            severity=rule.severity,
+                            file_path=file_path,
+                            line=buffer_start_line,
+                            column=max(0, buffer_start_col),
+                            message="Dockerfile pipes remote script directly to shell.",
+                            fix_hint=rule.fix_hint,
+                        )
+                    )
+                buffer = ""
+
+    if buffer:
+        m_buf = pipe_pattern.search(buffer)
+        if m_buf:
+            rule = RULES["DK001"]
+            findings.append(
+                Finding(
+                    rule_id=rule.id,
+                    severity=rule.severity,
+                    file_path=file_path,
+                    line=buffer_start_line,
+                    column=max(0, buffer_start_col),
+                    message="Dockerfile pipes remote script directly to shell.",
+                    fix_hint=rule.fix_hint,
+                )
+            )
+
+    return findings
+
+
+def verify_shell_source(source: str, file_path: str) -> list[Finding]:
+    """Verify shell script for robust error handling (SH001)."""
+    findings: list[Finding] = []
+    has_set_e = False
+
+    set_e_pattern = re.compile(
+        r"(?:^|[\s;&|])set\s+(?:-[a-zA-Z]*e[a-zA-Z]*|-o\s+errexit)\b"
+    )
+
+    for raw_line in source.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        code_part = line.split("#")[0].strip()
+        if set_e_pattern.search(code_part):
+            has_set_e = True
+            break
+
+    if not has_set_e:
+        rule = RULES["SH001"]
+        findings.append(
+            Finding(
+                rule_id=rule.id,
+                severity=rule.severity,
+                file_path=file_path,
+                line=1,
+                column=0,
+                message="Shell script lacks 'set -e' or 'set -euo pipefail' for robust error handling.",
+                fix_hint=rule.fix_hint,
+            )
+        )
+
+    return findings
+
+
 def verify_file(file_path: str | Path) -> list[Finding]:
     """Inspect a single source file and return detected findings."""
     path = Path(file_path)
@@ -822,6 +954,16 @@ def verify_file(file_path: str | Path) -> list[Finding]:
         "/.claude/settings.local.json"
     ):
         return verify_config_source(content, path_str)
+
+    if (
+        basename == "dockerfile"
+        or basename.startswith("dockerfile.")
+        or path.suffix.lower() == ".dockerfile"
+    ):
+        return verify_dockerfile(content, path_str)
+
+    if path.suffix.lower() in (".sh", ".bash"):
+        return verify_shell_source(content, path_str)
 
     if path.suffix == ".py":
         return verify_python_source(content, path_str)
@@ -844,8 +986,24 @@ def verify_path(target_path: str | Path) -> list[Finding]:
         return verify_file(root)
 
     findings: list[Finding] = []
-    scanned_suffixes = {".py", ".rs", ".go", ".ts", ".tsx", ".js", ".jsx"}
-    scanned_filenames = {".cursorrules", "settings.local.json", "package.json"}
+    scanned_suffixes = {
+        ".py",
+        ".rs",
+        ".go",
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".sh",
+        ".bash",
+        ".dockerfile",
+    }
+    scanned_filenames = {
+        ".cursorrules",
+        "settings.local.json",
+        "package.json",
+        "dockerfile",
+    }
 
     for dirpath, dirnames, filenames in os.walk(root):
         # Allow .claude directory to be traversed while skipping __pycache__, node_modules, and other hidden dirs
@@ -857,7 +1015,12 @@ def verify_path(target_path: str | Path) -> list[Finding]:
         ]
         for fname in sorted(filenames):
             fpath = Path(dirpath) / fname
-            if fpath.suffix.lower() in scanned_suffixes or fname.lower() in scanned_filenames:
+            fname_lower = fname.lower()
+            if (
+                fpath.suffix.lower() in scanned_suffixes
+                or fname_lower in scanned_filenames
+                or fname_lower.startswith("dockerfile.")
+            ):
                 findings.extend(verify_file(fpath))
 
     return findings

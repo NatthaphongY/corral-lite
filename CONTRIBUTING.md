@@ -17,8 +17,9 @@ Corral-Lite requires Python 3.10+ and relies strictly on Python standard library
 ### 1. Fork & Clone
 
 ```bash
-git clone https://github.com/NatthaphongY/corral-lite.git
+git clone https://github.com/<your-username>/corral-lite.git
 cd corral-lite
+git remote add upstream https://github.com/NatthaphongY/corral-lite.git
 ```
 
 ### 2. Set Up Virtual Environment

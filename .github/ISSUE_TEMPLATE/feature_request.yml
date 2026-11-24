@@ -22,7 +22,7 @@ body:
       description: Describe the solution or new rule logic you'd like to see implemented.
       placeholder: |
         Rule ID / Title:
-        Language: Python / Rust
+        Language: Python / Rust / Go / TypeScript / Dockerfile / Shell / Config
         Severity: Blocking / Advisory
         Behavior: ...
     validations:

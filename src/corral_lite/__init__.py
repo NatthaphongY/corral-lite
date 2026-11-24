@@ -14,16 +14,35 @@
 
 """Corral-Lite: Deterministic AST and pattern static verification engine."""
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
-from corral_lite.ast_rules import Finding, Rule, Severity, verify_file, verify_path, verify_package_json
+from corral_lite.ast_rules import (
+    Finding,
+    Rule,
+    Severity,
+    verify_dockerfile,
+    verify_file,
+    verify_go_source,
+    verify_package_json,
+    verify_path,
+    verify_python_source,
+    verify_rust_source,
+    verify_shell_source,
+    verify_ts_source,
+)
 
 __all__ = [
     "__version__",
     "Finding",
     "Rule",
     "Severity",
+    "verify_dockerfile",
     "verify_file",
-    "verify_path",
+    "verify_go_source",
     "verify_package_json",
+    "verify_path",
+    "verify_python_source",
+    "verify_rust_source",
+    "verify_shell_source",
+    "verify_ts_source",
 ]

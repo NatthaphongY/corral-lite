@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-11-24
+
+### Added
+- 2 advisory static verification rules bringing total rules to 19:
+  - `DK001` (ADVISORY, dockerfile): Detects Dockerfiles piping remote scripts directly to shell (`curl ... | bash` / `wget ... | sh`).
+  - `SH001` (ADVISORY, shell): Detects `.sh` / `.bash` scripts lacking robust error handling (`set -e` or `set -euo pipefail`).
+- Recursive discovery and file verification support for `Dockerfile` / `*.dockerfile` and `*.sh` / `*.bash`.
+- Pre-commit hook configuration `.pre-commit-hooks.yaml` at repository root.
+- GitHub Actions CI workflow example for SARIF uploads to GitHub Code Scanning in `examples/github-action-sarif.yml`.
+- CLI `--version` option reporting current release version `0.4.0`.
+- Exported `verify_dockerfile` and `verify_shell_source` helpers in `corral_lite`.
+- Comprehensive positive, negative, and file discovery test suites for `DK001` and `SH001`.
+
 ## [0.3.0] - 2026-11-22
 
 ### Added

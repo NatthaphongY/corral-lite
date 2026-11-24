@@ -5,7 +5,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![Typing](https://img.shields.io/badge/typing-PEP_561-blueviolet.svg)](https://peps.python.org/pep-0561/)
 
-> **Fast, deterministic AST and pattern static verification engine for Python and Rust with zero external dependencies.**
+> **Fast, deterministic AST and pattern static verification engine for Python, Rust, Go, TypeScript, AI agent configs, package manifests, Dockerfile, and Shell with zero external dependencies.**
 
 Corral-Lite provides instant, reproducible static gatekeeper checks designed to eliminate silent error swallowing, unsafe dynamic code execution, mutable default state bugs, and structural defects before code reaches pull requests or production.
 
@@ -19,7 +19,7 @@ Corral-Lite processes source files through a deterministic pipeline that maps di
 
 ```mermaid
 flowchart LR
-    A["Source Files<br/>(*.py, *.rs)"] --> B["AST & Pattern Rules<br/>(ast, re)"]
+    A["Source Files<br/>(*.py, *.rs, *.go, *.ts,<br/>*.sh, Dockerfile, etc.)"] --> B["AST & Pattern Rules<br/>(ast, re, json)"]
     B --> C{"Gate Decision<br/>(Exit 0 / 1)"}
     C --> D["Text Report<br/>(Terminal / Logs)"]
     C --> E["Structured JSON<br/>(CI Automation)"]
@@ -34,6 +34,7 @@ flowchart LR
 - **Strictly Deterministic**: Reproducible pass/fail verdicts with identical exit codes across Windows, Linux, and macOS.
 - **Fail-Closed Gatekeeper**: Blocking violations immediately yield exit code `1`, preventing flawed pull requests from merging. Advisory findings provide actionable feedback without breaking pipelines.
 - **SARIF v2.1.0 Native**: Direct support for OASIS SARIF v2.1.0 exports, seamlessly integrating with GitHub Advanced Security and Code Scanning alerts.
+- **Pre-Commit Ready**: First-class `.pre-commit-hooks.yaml` integration for local git workflow enforcement.
 - **Typed & Standards-Compliant**: Fully typed PEP 561 package (`src/` layout, `py.typed`) ready for strict static typing setups.
 - **Normative Specification Alignment**: Implements core verification checks aligned with the [CORRAL Verification Specification (CVS) v1.0](docs/spec/CORRAL_VERIFICATION_SPECIFICATION_v1.md).
 
@@ -73,7 +74,7 @@ If any **blocking** finding is detected, `corral-lite` exits with code `1`. If o
 
 ## Verification Rules
 
-Corral-Lite inspects codebases against 10 deterministic static verification rules:
+Corral-Lite inspects codebases against 19 deterministic static verification rules:
 
 | Rule ID | Language | Severity | Title | Description |
 |---|---|---|---|---|
@@ -85,8 +86,17 @@ Corral-Lite inspects codebases against 10 deterministic static verification rule
 | **PY006** | Python | Blocking | Subprocess `shell=True` | Flags `subprocess` executions using `shell=True`. |
 | **PY007** | Python | Blocking | Assert in Non-Test Code | Flags `assert` statements used in non-test production modules. |
 | **PY008** | Python | Blocking | Hardcoded Secret Literal | Flags credential variables assigned static secret string literals. |
+| **PY009** | Python | Blocking | Insecure Deserialization | Flags `pickle.load`/`pickle.loads` or `torch.load` missing `weights_only=True`. |
+| **PY010** | Python | Blocking | Insecure YAML Load | Flags `yaml.load()` without explicit `SafeLoader` or `CSafeLoader`. |
 | **RS001** | Rust | Blocking | Unguarded Unwrap / Panic | Flags `.unwrap()`, `.expect()`, or `panic!()` in non-test Rust code. |
 | **RS002** | Rust | Blocking | Identical Conditional Branches | Flags duplicate logic executed across both `if` and `else` branches. |
+| **RS003** | Rust | Blocking | Lock Guard Across Await | Flags mutex locks held across `.await` points in async functions. |
+| **GO001** | Go | Blocking | Discarded Error Identifier | Flags discarded error values via blank identifier (`_ = err`, `_, _ = ...`). |
+| **TS001** | TypeScript | Blocking | Vacant Catch Block | Flags empty or comment-only `catch` blocks in TypeScript/JavaScript. |
+| **AGT001** | Config | Blocking | Agent Secret / Wildcard | Flags hardcoded secret tokens (`sk-`, `ghp_`, `AKIA`) or wildcard permissions in agent configs. |
+| **DEPS001** | Config | Advisory | Lifecycle Install Scripts | Flags `preinstall` or `postinstall` lifecycle scripts in `package.json`. |
+| **DK001** | Dockerfile | Advisory | Pipe Remote Script to Shell | Flags `Dockerfile` piping remote scripts to shell (`curl ... \| bash` / `wget ... \| sh`). |
+| **SH001** | Shell | Advisory | Shell Missing `set -e` | Flags `.sh` / `.bash` scripts lacking `set -e` or `set -euo pipefail`. |
 
 ---
 
@@ -136,7 +146,7 @@ corral-lite check src/ --format json
 
 ### 3. OASIS SARIF v2.1.0 for GitHub Code Scanning
 
-Export findings directly to SARIF and integrate with GitHub Actions:
+Export findings directly to SARIF and integrate with GitHub Actions (see full workflow at [examples/github-action-sarif.yml](examples/github-action-sarif.yml)):
 
 ```bash
 corral-lite check src/ --format sarif > results.sarif
@@ -152,6 +162,21 @@ In your `.github/workflows/ci.yml`:
   uses: github/codeql-action/upload-sarif@v3
   with:
     sarif_file: results.sarif
+```
+
+---
+
+## Pre-Commit Hook
+
+Enforce Corral-Lite verification automatically on commit using [pre-commit](https://pre-commit.com/):
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/NatthaphongY/corral-lite
+    rev: v0.4.0
+    hooks:
+      - id: corral-lite
 ```
 
 ---

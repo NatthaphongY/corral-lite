@@ -1,8 +1,8 @@
-# corral-lite
+# corral-lite (v0.4.0)
 
-> Fast, deterministic AST and pattern static verification engine for Python and Rust with zero external dependencies.
+> Fast, deterministic AST and pattern static verification engine for Python, Rust, Go, TypeScript, AI agent configs, package manifests, Dockerfile, and Shell with zero external dependencies.
 
-Corral-Lite provides static gatekeeper checks that detect code smells, unsafe dynamic code execution, and mutable default arguments. It returns deterministic exit codes (0 for clean/advisory, 1 for blocking violations) and generates text, structured JSON, or SARIF v2.1.0 reports.
+Corral-Lite provides static gatekeeper checks that detect code smells, unsafe dynamic code execution, mutable default arguments, discarded errors, and supply-chain hazards. It returns deterministic exit codes (0 for clean/advisory, 1 for blocking violations) and generates text, structured JSON, or SARIF v2.1.0 reports.
 
 ## Core Entrypoints
 
@@ -14,8 +14,11 @@ Corral-Lite provides static gatekeeper checks that detect code smells, unsafe dy
 
 ```bash
 # Basic check
-corral-lite check <path>...
-python -m corral_lite.cli check <path>...
+corral-lite check <path>
+python -m corral_lite.cli check <path>
+
+# Version check
+corral-lite --version
 
 # Output formats: text (default), json, sarif
 python -m corral_lite.cli check --format json src/
@@ -25,7 +28,7 @@ python -m corral_lite.cli check --format sarif src/ > results.sarif
 - `0`: Scan passed with 0 blocking findings (advisory findings may be present).
 - `1`: Blocking findings detected, or runtime CLI argument error.
 
-## Rules (10)
+## Rules (19)
 
 - `PY001` (Blocking): Bare or broad except pass (`except:` or `except Exception: pass`).
 - `PY002` (Blocking): Mutable default argument (`[]`, `{}`, `set()`).
@@ -35,8 +38,17 @@ python -m corral_lite.cli check --format sarif src/ > results.sarif
 - `PY006` (Blocking): Subprocess execution with `shell=True`.
 - `PY007` (Blocking): `assert` statement in non-test production code.
 - `PY008` (Blocking): Hardcoded secret credentials assigned to variables.
+- `PY009` (Blocking): Insecure deserialization via `pickle.load`/`pickle.loads` or `torch.load` missing `weights_only=True`.
+- `PY010` (Blocking): Insecure YAML deserialization without `SafeLoader` or `CSafeLoader`.
 - `RS001` (Blocking): Rust unguarded `.unwrap()`, `.expect()`, or `panic!()`.
 - `RS002` (Blocking): Rust identical conditional branches (`if`/`else`).
+- `RS003` (Blocking): Holding lock guard across `.await` in async Rust function.
+- `GO001` (Blocking): Discarded error assignment via blank identifier (`_ = err`, `_, _ = ...`, `, _ :=`).
+- `TS001` (Blocking): Vacant catch block without error handling.
+- `AGT001` (Blocking): Hardcoded secret token or wildcard execution permission in agent config.
+- `DEPS001` (Advisory): Package defines preinstall or postinstall lifecycle scripts.
+- `DK001` (Advisory): Dockerfile piping remote scripts directly to shell (`curl ... | bash` / `wget ... | sh`).
+- `SH001` (Advisory): Shell script lacking `set -e` or `set -euo pipefail`.
 
 ## Python API
 
@@ -48,6 +60,39 @@ from corral_lite import verify_file, verify_path, Severity
 findings = verify_path(Path("src/corral_lite"))
 blocking = [f for f in findings if f.severity == Severity.BLOCKING]
 ```
+
+### 1. `Finding` Object Schema (Python API)
+
+Every finding reported by `verify_file` or `verify_path` is an instance of `Finding` with 7 attributes:
+- `rule_id: str`: Rule identifier (e.g., `"PY001"`, `"DK001"`).
+- `severity: Severity`: Finding severity enum (`Severity.BLOCKING` or `Severity.ADVISORY`, string values `"blocking"` | `"advisory"`).
+- `file_path: str`: Normalized path to the target file.
+- `line: int`: 1-based line number of the finding.
+- `column: int`: 0-based column offset of the finding.
+- `message: str`: Concise human-readable diagnostic description.
+- `fix_hint: str`: Actionable remediation guidance.
+
+### 2. `--format json` Output Schema (Abbreviated)
+
+Structured JSON output emitted when `--format json` is passed:
+- Top-level keys:
+  - `verdict`: `"PASSED"` (0 blocking findings) | `"FAILED"` (>= 1 blocking finding).
+  - `findings_count`: Total findings count (`int`).
+  - `blocking_count`: Total blocking findings count (`int`).
+  - `findings`: Array of finding objects, each containing:
+    - `rule_id`: `"PY001"` | ... | `"SH001"` (`str`)
+    - `severity`: `"blocking"` | `"advisory"` (`str`)
+    - `file_path`: Target file path (`str`)
+    - `line`: Line number (`int`)
+    - `column`: Column offset (`int`)
+    - `message`: Diagnostic message (`str`)
+    - `fix_hint`: Remediation advice (`str`)
+
+### 3. Scope, Runtime Constraints & Edge Cases
+
+- **Supported Targets in v0.4.0**: `.py`, `.rs`, `.go`, `.ts`, `.tsx`, `.js`, `.jsx`, `.cursorrules`, `.claude/settings.local.json`, `package.json`, `Dockerfile` / `*.dockerfile`, `.sh` / `.bash`. Unsupported file extensions are skipped cleanly during directory scans.
+- **Runtime Constraints**: Python 3.10+ standard library only (`ast`, `re`, `json`, `argparse`, `dataclasses`, `enum`, `pathlib`, `typing`, `sys`). Zero external dependencies at runtime.
+- **Edge Cases & Exit Behavior**: `ADVISORY` findings emit warnings and inform developers without breaking pipelines (exit code `0`). Only `BLOCKING` findings or invalid CLI paths yield exit code `1` (or `2` on execution error).
 
 ## Normative Spec
 

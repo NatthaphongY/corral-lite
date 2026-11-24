@@ -34,6 +34,8 @@ Recursive repository discovery inspects files matching registered suffixes and b
 - **TypeScript / JavaScript**: `.ts`, `.tsx`, `.js`, `.jsx`
 - **Agent Configurations**: `.cursorrules`, `.claude/settings.local.json`, `settings.local.json`
 - **Package Manifests**: `package.json`
+- **Dockerfile**: `Dockerfile`, `*.dockerfile`, `dockerfile.*`
+- **Shell Scripts**: `.sh`, `.bash`
 
 Ignored by default: `.git`, `__pycache__`, `node_modules`, and hidden dot-directories (except `.claude`).
 
@@ -41,7 +43,7 @@ Ignored by default: `.git`, `__pycache__`, `node_modules`, and hidden dot-direct
 
 ### 3. Rule Taxonomy & Severity Spectrum
 
-Corral-Lite implements 17 deterministic rules across two severity tiers:
+Corral-Lite implements 19 deterministic rules across two severity tiers:
 
 #### Blocking Severity (`blocking` -> Exit 1)
 Defects and security hazards requiring immediate remediation before merge or release:
@@ -65,6 +67,8 @@ Quality and supply-chain hygiene warnings:
 - **`PY004`**: Wildcard import (`from module import *`) obscuring namespace provenance.
 - **`PY005`**: Unguarded `json.loads()` call outside `try-except` block.
 - **`DEPS001`**: `package.json` defines `preinstall` or `postinstall` lifecycle scripts posing supply-chain risks.
+- **`DK001`**: `Dockerfile` pipes remote script directly to shell (`curl ... | bash` / `wget ... | sh`).
+- **`SH001`**: Shell script lacks `set -e` or `set -euo pipefail` for robust error handling.
 
 ---
 

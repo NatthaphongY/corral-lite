@@ -5,9 +5,8 @@ Instructions and repository contract for autonomous coding agents (Claude Code, 
 ## Repository Architecture
 
 - `src/corral_lite/`: Pure Python package adhering to PEP 561 (`py.typed`).
-  - `ast_rules.py`: Deterministic AST and regex pattern verification engine implementing all 17 rules.
-  - `cli.py`: Command-line interface with `--format text|json|sarif` support.
-  - `sarif.py`: OASIS SARIF v2.1.0 report serializer.
+  - `ast_rules.py`: Deterministic AST and regex pattern verification engine implementing all 19 rules.
+  - `cli.py`: Command-line interface with `--format text|json|sarif` support and built-in SARIF v2.1.0 serializer.
 - `tests/`: Comprehensive pytest suite (`test_corral_lite.py`).
 - `docs/spec/`: Normative specification documentation (`CORRAL_VERIFICATION_SPECIFICATION_v1.md`).
 

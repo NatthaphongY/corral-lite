@@ -1,0 +1,39 @@
+name: Corral-Lite Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  corral-scan:
+    name: Run Corral-Lite & Upload SARIF
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Corral-Lite
+        run: pip install corral-lite
+
+      - name: Run Corral-Lite Gate & Export SARIF
+        run: corral-lite check . --format sarif > results.sarif
+        continue-on-error: true
+
+      - name: Upload SARIF report to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+          category: corral-lite

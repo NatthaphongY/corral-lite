@@ -1,0 +1,6 @@
+- id: corral-lite
+  name: corral-lite
+  description: Deterministic AST and pattern static verification engine
+  entry: corral-lite check
+  language: python
+  types_or: [python, rust, go, ts, javascript, shell, dockerfile, json]

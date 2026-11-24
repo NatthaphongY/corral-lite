@@ -128,7 +128,7 @@ def _format_sarif(findings: list[Finding]) -> str:
                 "tool": {
                     "driver": {
                         "name": "corral-lite",
-                        "version": "0.3.0",
+                        "version": "0.4.0",
                         "informationUri": "https://github.com/NatthaphongY/corral-lite",
                         "rules": rules_table,
                     }
@@ -145,6 +145,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="corral-lite",
         description="Deterministic AST and pattern static verification engine.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version="%(prog)s 0.4.0",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

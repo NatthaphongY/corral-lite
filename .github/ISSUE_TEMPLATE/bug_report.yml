@@ -11,8 +11,8 @@ body:
     id: version
     attributes:
       label: Corral-Lite Version
-      description: What version of corral-lite are you using? (e.g., v0.1.0 or git commit SHA)
-      placeholder: "0.1.0"
+      description: What version of corral-lite are you using? (e.g., v0.4.0 or git commit SHA)
+      placeholder: "0.4.0"
     validations:
       required: true
   - type: input
